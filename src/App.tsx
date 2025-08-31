@@ -1,142 +1,145 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from 'react';
 
-// แผนที่เกรด -> คะแนน (สำหรับคำนวณ GPA)
-const GRADE_POINTS: Record<string, number> = {
-  A: 4.0,
-  "B+": 3.5,
-  B: 3.0,
-  "C+": 2.5,
-  C: 2.0,
-  "D+": 1.5,
-  D: 1.0,
-  F: 0.0,
-  W: NaN, // ไม่คิดรวมในการคำนวณ
-};
+const GradeTracker = () => {
+  const [subjects, setSubjects] = useState([]);
+  const [subjectName, setSubjectName] = useState('');
+  const [grade, setGrade] = useState('A');
+  const [gpa, setGpa] = useState(null);
 
-type Course = {
-  id: string;
-  name: string;
-  grade: keyof typeof GRADE_POINTS;
-};
+  const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F', 'W'];
+  
+  const gradeToPoints = {
+    'A': 4.0,
+    'B+': 3.5,
+    'B': 3.0,
+    'C+': 2.5,
+    'C': 2.0,
+    'D+': 1.5,
+    'D': 1.0,
+    'F': 0.0,
+    'W': 0.0
+  };
 
-export default function CourseGPA() {
-  const [name, setName] = useState("");
-  const [grade, setGrade] = useState<keyof typeof GRADE_POINTS>("A");
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [gpa, setGpa] = useState<number | null>(null);
-
-  const canAdd = name.trim().length > 0 && grade !== undefined;
-
-  function addCourse() {
-    if (!canAdd) return;
-    const newCourse: Course = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      grade,
+  const addSubject = () => {
+    if (subjectName.trim() === '') return;
+    
+    const newSubject = {
+      id: Date.now(),
+      name: subjectName.trim(),
+      grade: grade
     };
-    setCourses((prev) => [newCourse, ...prev]);
-    setName("");
-    setGrade("A");
-    setGpa(null); // มีการเปลี่ยนข้อมูล ให้เคลียร์ผลลัพธ์เดิม
-  }
-
-  function removeCourse(id: string) {
-    setCourses((prev) => prev.filter((c) => c.id !== id));
+    
+    setSubjects([...subjects, newSubject]);
+    setSubjectName('');
     setGpa(null);
-  }
+  };
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") addCourse();
-  }
+  const removeSubject = (id) => {
+    setSubjects(subjects.filter(subject => subject.id !== id));
+    setGpa(null);
+  };
 
-  function calculateGPA() {
-    const valid = courses.filter((c) => !Number.isNaN(GRADE_POINTS[c.grade])); // ตัด W ออก
-    const total = valid.reduce((sum, c) => sum + GRADE_POINTS[c.grade], 0);
-    const gpaValue = valid.length === 0 ? 0 : total / valid.length;
-    setGpa(Number(gpaValue.toFixed(2)));
-  }
+  const calculateGPA = () => {
+    if (subjects.length === 0) return;
 
-  const hasCourses = courses.length > 0;
-  const validCount = useMemo(
-    () => courses.filter((c) => !Number.isNaN(GRADE_POINTS[c.grade])).length,
-    [courses]
-  );
+    const validSubjects = subjects.filter(subject => subject.grade !== 'W');
+    
+    if (validSubjects.length === 0) {
+      setGpa(0);
+      return;
+    }
+
+    const totalPoints = validSubjects.reduce((sum, subject) => {
+      return sum + gradeToPoints[subject.grade];
+    }, 0);
+    
+    const calculatedGPA = (totalPoints / validSubjects.length).toFixed(2);
+    setGpa(calculatedGPA);
+  };
 
   return (
-    <div style={{ maxWidth: 520, margin: "16px auto", fontFamily: "sans-serif" }}>
-      <h2>บันทึกรายวิชา + เกรด (แบบพื้นฐาน)</h2>
-
-      {/* ส่วนรับข้อมูล */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-        <input
-          type="text"
-          placeholder="รายชื่อวิชา"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          style={{ flex: 1, padding: 6 }}
-        />
-        <select
-          value={grade}
-          onChange={(e) => setGrade(e.target.value as keyof typeof GRADE_POINTS)}
-          style={{ padding: 6 }}
-        >
-          {Object.keys(GRADE_POINTS).map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
-        <button onClick={addCourse} disabled={!canAdd} style={{ padding: "6px 10px" }}>
-          เพิ่มรายวิชา
-        </button>
-      </div>
-
-      {/* รายการวิชา */}
-      <div>
-        {!hasCourses && <div style={{ color: "#666", fontSize: 14 }}>ยังไม่มีรายวิชา</div>}
-        {courses.map((c) => (
-          <div
-            key={c.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              border: "1px solid #ddd",
-              padding: 8,
-              marginBottom: 6,
-            }}
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">ระบบเก็บรายชื่อวิชาและเกรด</h1>
+      
+      {/* Input Form */}
+      <div className="mb-6 p-4 border rounded">
+        <div className="flex gap-3 mb-3">
+          <input
+            type="text"
+            value={subjectName}
+            onChange={(e) => setSubjectName(e.target.value)}
+            placeholder="ชื่อวิชา"
+            className="flex-1 px-3 py-2 border rounded"
+          />
+          
+          <select
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+            className="px-3 py-2 border rounded"
           >
-            <div>
-              <div style={{ fontWeight: 600 }}>{c.name}</div>
-              <div
-                style={{
-                  color: c.grade === "F" ? "red" : undefined,
-                }}
-              >
-                เกรด: {c.grade}
-              </div>
-            </div>
-            <button onClick={() => removeCourse(c.id)} style={{ padding: "4px 8px" }}>
-              ลบ
-            </button>
-          </div>
-        ))}
+            {gradeOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          
+          <button
+            onClick={addSubject}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            เพิ่มรายวิชา
+          </button>
+        </div>
       </div>
 
-      {/* ปุ่มคำนวณ GPA */}
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={calculateGPA} disabled={!hasCourses} style={{ padding: "6px 10px" }}>
-          คำนวณ GPA
-        </button>
-        <div style={{ alignSelf: "center" }}>
+      {/* Subjects List */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-3">รายวิชาทั้งหมด</h2>
+        
+        {subjects.length === 0 ? (
+          <p className="text-gray-500">ยังไม่มีรายวิชา</p>
+        ) : (
+          <div className="space-y-2">
+            {subjects.map((subject) => (
+              <div key={subject.id} className="flex justify-between items-center p-3 border rounded">
+                <span className={subject.grade === 'F' ? 'text-red-600' : ''}>
+                  {subject.name}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{subject.grade}</span>
+                  <button
+                    onClick={() => removeSubject(subject.id)}
+                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* GPA Section */}
+      <div className="p-4 border rounded">
+        <div className="flex justify-between items-center">
+          <button
+            onClick={calculateGPA}
+            disabled={subjects.length === 0}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
+          >
+            คำนวณ GPA
+          </button>
+          
           {gpa !== null && (
-            <span>
-              GPA: <strong>{gpa.toFixed(2)}</strong> {validCount !== courses.length && "(ไม่นับ W)"}
-            </span>
+            <div>
+              <span className="text-lg">GPA: </span>
+              <span className="text-xl font-bold">{gpa}</span>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default GradeTracker;
